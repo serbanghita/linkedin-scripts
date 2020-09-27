@@ -1,6 +1,7 @@
 /**
  * 1. Go to https://www.linkedin.com/in/{contact}
  * 2. On the profile page navigate to "400 connections"
+ *      - apply any filters you want to the page.
  * 3. Press F12 (open Chrome Developer Tools).
  * 4. Copy and apply script in the console.
  * 5. Wait for the navigation to finish.
