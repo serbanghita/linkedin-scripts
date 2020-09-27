@@ -1,7 +1,6 @@
 /**
  * 1. Go to https://www.linkedin.com/company/{company}/people/
- * 2. Scroll until you reach the bottom.
- * 3. Press F12 (open Chrome Developer Tools).
+ * 2. Press F12 (open Chrome Developer Tools).
  * 3. Copy and apply script in the console.
  */
 
@@ -35,7 +34,7 @@
 
     // The amount to be scrolled.
     const MOUSE_SCROLL_AMOUNT = 1000;
-    let loopId = 0, loopTimeDiff = 0, loopTimeThen = 0;
+    let loopId = 0, loopTick = 0;
     let totalEmployees = 0;
     const copyToClipboard = copy;
 
@@ -44,11 +43,22 @@
             this.element = profileCardElement;
             this.result = Object.create(null);
 
+            this.fetchProfileLink();
             this.fetchName();
             this.fetchConnectionType();
             this.fetchSubtitle();
             this.setJobAndCompany();
             this.fetchSharedConnections();
+        }
+        fetchProfileLink() {
+            let linkElem = this.element.querySelector('[data-control-name="people_profile_card_name_link"]');
+            let linkUrl = "";
+            if (linkElem) {
+                const linkHrefValue = linkElem.getAttribute("href");
+                // LinkedIN profile URLs in href's are relative to the origin.
+                linkUrl = linkHrefValue ? `${window.location.origin}${linkHrefValue}` : "";
+            }
+            this.result["profileLink"] = linkUrl;
         }
         fetchName() {
             let nameElem = this.element.querySelector(".artdeco-entity-lockup__title .org-people-profile-card__profile-title");
@@ -108,7 +118,7 @@
         return totalEmployees;
     }
 
-    function processPage() {
+    function processPage(outputType) {
         console.log(`Processing page ...`)
         console.log(`Organization should have: ${totalEmployees}.`);
 
@@ -120,6 +130,13 @@
             console.log(`Nice, you fetched all ${totalEmployees} in the clipboard! Go paste them somewhere.`)
         }
 
+        if (outputType === "JSON") {
+            return Array.from(profileCards).map((profileCardElement) => {
+                const profileCard = new ProfileCard(profileCardElement);
+                return profileCard.getResult();
+            });
+        }
+        // CSV is the default output.
         return Array.from(profileCards).map((profileCardElement) => {
             const profileCard = new ProfileCard(profileCardElement);
             return profileCard.getResultAsCSVLine();
@@ -127,19 +144,20 @@
     }
 
     function loop(now) {
-        // Loop (FPS).
-        loopTimeDiff = now - loopTimeThen;
-        loopTimeThen = now;
+        loopTick += 1;
 
-        if (loopTimeDiff > 32) {
+        if (loopTick > 32) {
             if (doesPageNeedScrolling()) {
                 scrollPage();
             } else {
-                const result = processPage()
+                const result = processPage("JSON")
                 copyToClipboard(result)
+                // console.log(result);
 
                 return cancelAnimationFrame(loopId);
             }
+
+            loopTick = 0;
         }
 
         loopId = requestAnimationFrame(loop);
