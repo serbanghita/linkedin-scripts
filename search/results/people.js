@@ -35,6 +35,7 @@
     let loopId = 0, loopTick = 0;
     let currentPage = 1, lastPage = 0, pagination;
     const copyToClipboard = copy;
+    let amountScrolled = 0;
 
     class SearchResult {
         constructor(searchResultElement) {
@@ -158,34 +159,35 @@
         }
     }
 
+    function canScrollPage() {
+        return amountScrolled < document.body.getBoundingClientRect().height;
+    }
+
     function scrollPage() {
-        // window.scrollTo(0, document.body.getBoundingClientRect().height);
-        window.scrollTo(0, 500);
-        const pagination = fetchPaginationElement();
-        if (pagination) {
-            pagination.scrollIntoView();
-        }
-        console.log(`Scrolling to bottom ...`);
+        amountScrolled += window.innerHeight;
+        window.scrollTo(0, amountScrolled);
+
+        console.log(`Scrolling to bottom ${amountScrolled}...`);
+        return true;
     }
 
     function hasOccludedEntities() {
         return document.querySelectorAll(`.search-results__list .search-result__occlusion-hint`).length > 0;
     }
 
-    // Check if pagination element exist.
-    function doesPageNeedScrolling() {
-        if (hasOccludedEntities() || !fetchPaginationElement()) {
-            return true;
+    function pageHasRendered() {
+        if (canScrollPage()) {
+            return false;
         }
 
-        fetchPagination();
-
-        if (pagination.canGoNext() && getSearchResults() < SEARCH_RESULTS_PER_PAGE) {
-            return true;
+        if (Pagination.isLoading()) {
+            return false;
         }
 
-        return false;
+        return true;
     }
+
+
 
     function fetchPaginationElement() {
         return document.querySelector(".artdeco-pagination");
@@ -203,16 +205,17 @@
         loopTick += 1;
 
         if (loopTick > 128) {
-            if (doesPageNeedScrolling() || Pagination.isLoading()) {
+            if (!pageHasRendered()) {
                 scrollPage();
             } else {
+                amountScrolled = 0;
                 fetchPagination();
                 currentPage = pagination.getCurrentPage();
-
 
                 if (currentPage !== lastPage) {
                     const result = processPage("CSV");
                     results = results.concat(result);
+                    copyToClipboard(results.join(""));
                     lastPage = currentPage;
 
                     pagination.goNext();
